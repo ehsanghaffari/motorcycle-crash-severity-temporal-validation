@@ -123,7 +123,7 @@ FATAL_CLASS = 2
 EXPECTED_COHORT_SIZE = 6802
 EXPECTED_SEVERITY_COUNTS = {"PDO": 3871, "Injury": 2780, "Fatal": 151}
 
-PROTOCOL_VERSION = "paper_release_v1.0"
+PROTOCOL_VERSION = "paper_release_v1.1"
 MAX_ANNUAL_MISSING_PERCENT = 20.0
 MAX_DEV_TEST_MISSING_GAP_PERCENT = 15.0
 PRACTICAL_MODEL_TIE_MACRO_F1 = 0.01
@@ -2523,6 +2523,21 @@ def grouping_matrix(encoded_group_names: Sequence[str]) -> tuple[np.ndarray, lis
     return matrix, groups
 
 
+def shap_input_matrix(matrix) -> np.ndarray:
+    """Return a dense TreeSHAP input that preserves XGBoost sparse-matrix semantics.
+
+    Stored sparse entries keep their values. Entries that are not stored are
+    represented as NaN so SHAP follows the same missing-value branches used by
+    the fitted XGBoost model.
+    """
+    if not sparse.issparse(matrix):
+        return np.asarray(matrix, dtype=float)
+    coo = sparse.coo_matrix(matrix)
+    dense = np.full(coo.shape, np.nan, dtype=float)
+    dense[coo.row, coo.col] = coo.data
+    return dense
+
+
 def run_shap_analysis(
     fitted_pipeline: BaseEstimator,
     X_test: pd.DataFrame,
@@ -2544,10 +2559,7 @@ def run_shap_analysis(
     transformed, encoded_names, encoded_groups = transformed_matrix_and_metadata(
         fitted_pipeline, X_sample, categorical_features, numeric_features
     )
-    if sparse.issparse(transformed):
-        transformed_for_shap = transformed.toarray()
-    else:
-        transformed_for_shap = np.asarray(transformed)
+    transformed_for_shap = shap_input_matrix(transformed)
     estimator = unwrap_tree_estimator(fitted_pipeline)
     explainer = shap.TreeExplainer(estimator)
     raw_values = explainer.shap_values(transformed_for_shap, check_additivity=False)
@@ -2679,7 +2691,7 @@ def run_shap_interactions(
     transformed, _, encoded_groups = transformed_matrix_and_metadata(
         fitted_pipeline, X_sample, categorical_features, numeric_features
     )
-    dense = transformed.toarray() if sparse.issparse(transformed) else np.asarray(transformed)
+    dense = shap_input_matrix(transformed)
     raw = explainer.shap_interaction_values(dense)
     standardized = standardize_interaction_values(
         raw,
