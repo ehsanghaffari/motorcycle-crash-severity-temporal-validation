@@ -20,14 +20,14 @@ if errorlevel 1 goto :fail
 python -m pip install -r requirements.txt
 if errorlevel 1 goto :fail
 
-if not exist "data\UTM_96-98.xlsx" (
-    echo ERROR: data\UTM_96-98.xlsx was not found.
+if not exist "data\UTM 96-98.xlsx" (
+    echo ERROR: data\UTM 96-98.xlsx was not found.
     goto :fail
 )
 
 if not exist outputs mkdir outputs
 
-python src\motorcycle_crash_pipeline.py --data "data\UTM_96-98.xlsx" --output "outputs\main_analysis" --mode full
+python src\motorcycle_crash_pipeline.py --data "data\UTM 96-98.xlsx" --output "outputs\main_analysis" --mode full
 if errorlevel 1 goto :fail
 
 python src\supplementary_analyses.py --pipeline "src\motorcycle_crash_pipeline.py" --primary-output "outputs\main_analysis" --output "outputs\supplementary_analyses"
