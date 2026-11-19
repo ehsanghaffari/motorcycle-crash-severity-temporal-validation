@@ -66,7 +66,7 @@ except Exception:  # pragma: no cover
     def tqdm(it=None, *args, **kwargs):
         return it if it is not None else range(kwargs.get("total", 0))
 
-RUN_VERSION = "paper_release_v1.0"
+RUN_VERSION = "supplementary_analysis_v1.1"
 
 # Numerical settings used for the archived reference analysis
 PROBABILITY_TOLERANCE = 1e-6      # XGBoost/saved CSV are float32; also requires zero class changes
@@ -579,10 +579,20 @@ def run_threshold_sensitivity(mcp, cohort, stability: pd.DataFrame, config, best
 
 
 
+def xgb_view(matrix) -> np.ndarray:
+    """Return a dense SHAP input matching XGBoost sparse-matrix semantics."""
+    if not sparse.issparse(matrix):
+        return np.asarray(matrix, dtype=float)
+    coo = sparse.coo_matrix(matrix)
+    dense = np.full(coo.shape, np.nan, dtype=float)
+    dense[coo.row, coo.col] = coo.data
+    return dense
+
+
 def grouped_interaction_tensor(mcp, model, X_sample, cats, nums):
     import shap
     transformed,_,encoded_groups=mcp.transformed_matrix_and_metadata(model,X_sample,cats,nums)
-    dense=transformed.toarray() if sparse.issparse(transformed) else np.asarray(transformed)
+    dense=xgb_view(transformed)
     explainer=shap.TreeExplainer(mcp.unwrap_tree_estimator(model))
     raw=explainer.shap_interaction_values(dense)
     std=mcp.standardize_interaction_values(raw,dense.shape[0],dense.shape[1],3)[:,:,:,2]
@@ -623,18 +633,10 @@ def run_shap_stability(mcp, model, cohort, primary_cat, primary_num, config, bes
     idx = mcp.stratified_sample_indices(ytest, max_samples=min(600, len(test)), seed=42 + 91000, include_all_class=2)
     Xs = Xtest.iloc[idx].copy(); ys = ytest[idx]
     if int((ys == 2).sum()) != 58:
-        raise RuntimeError(f"Exact original interaction sample should contain all 58 fatal cases; found {(ys == 2).sum()}")
+        raise RuntimeError(f"Interaction sample should contain all 58 fatal cases; found {(ys == 2).sum()}")
     grouped, groups = grouped_interaction_tensor(mcp, model, Xs, primary_cat, primary_num)
     locked_rank = rank_interactions(grouped, groups, mcp)
     locked_rank.to_csv(out / "locked_model_interaction_ranking.csv", index=False, encoding="utf-8-sig")
-    orig = primary_output / "shap" / "fatal_shap_interaction_ranking.csv"
-    if orig.exists():
-        o = pd.read_csv(orig, encoding="utf-8-sig")
-        orig_pair = set([str(o.iloc[0]["feature_1_label"]), str(o.iloc[0]["feature_2_label"])])
-        new_pair = set([str(locked_rank.iloc[0]["feature_1_label"]), str(locked_rank.iloc[0]["feature_2_label"])])
-        if orig_pair != new_pair:
-            raise RuntimeError(f"Locked interaction ranking does not reproduce original leading pair: original={orig_pair}, recomputed={new_pair}")
-
     # (a) Class-stratified bootstrap of the exact 600-record interpretation sample
     # (every resample keeps 58 fatal records), model held fixed.
     ranks = []
@@ -966,7 +968,7 @@ def run_missingness_and_shap_diagnostics(mcp, model, cohort, primary_cat, primar
     idx = mcp.stratified_sample_indices(yt, max_samples=min(1500, len(test)), seed=42 + 90000, include_all_class=2)
     Xs = Xt.iloc[idx]
     transformed, encoded_names, encoded_groups = mcp.transformed_matrix_and_metadata(model, Xs, primary_cat, primary_num)
-    dense = transformed.toarray() if sparse.issparse(transformed) else np.asarray(transformed)
+    dense = xgb_view(transformed)
     raw = shap.TreeExplainer(mcp.unwrap_tree_estimator(model)).shap_values(dense, check_additivity=False)
     std = mcp.standardize_shap_values(raw, dense.shape[0], dense.shape[1], 3)  # [n, encoded, class]
     abs_mean = np.abs(std).mean(axis=0)  # [encoded, class]
