@@ -33,7 +33,7 @@ if errorlevel 1 goto :fail
 python src\supplementary_analyses.py --pipeline "src\motorcycle_crash_pipeline.py" --primary-output "outputs\main_analysis" --output "outputs\supplementary_analyses"
 if errorlevel 1 goto :fail
 
-python src\rebuild_shap_interaction_figures.py --pipeline "src\motorcycle_crash_pipeline.py" --primary-output "outputs\main_analysis" --figure-output "outputs\interaction_figures"
+python src\shap_analysis.py --pipeline "src\motorcycle_crash_pipeline.py" --runner "src\supplementary_analyses.py" --primary-output "outputs\main_analysis" --output "outputs\shap_analysis"
 if errorlevel 1 goto :fail
 
 echo COMPLETE
