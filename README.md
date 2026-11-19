@@ -6,7 +6,7 @@ Code accompanying the study **“Motorcycle Crash Severity Prediction under Temp
 
 - `src/motorcycle_crash_pipeline.py` — main analysis pipeline
 - `src/supplementary_analyses.py` — supplementary analyses
-- `src/rebuild_shap_interaction_figures.py` — SHAP interaction figure generation
+- `src/shap_analysis.py` — SHAP main-effect, interaction, and stability analyses
 - `requirements.txt` — Python dependencies
 - `run_all.bat` — Windows launcher
 
