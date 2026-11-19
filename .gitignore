@@ -1,19 +1,28 @@
+# Restricted/private data
 data/
 *.xlsx
 *.xls
+
+# Generated analysis outputs and model artifacts
 outputs/
 *.joblib
 *.pkl
 *.pickle
 *.npz
+
+# Python environments and caches
 .venv/
 venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# IDE / OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Logs and temporary files
 *.log
 *.tmp
